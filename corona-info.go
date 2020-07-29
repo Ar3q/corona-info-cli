@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -63,9 +64,17 @@ func printTable(responseObject *response, numberOfCountries int) {
 }
 
 func main() {
-	country := flag.String("c", "", "country name")
-	top := flag.Int("t", 255, "top x countries")
+	country := flag.String("c", "", "Country name")
+	top := flag.Int("t", 255, "Top x countries")
+	help := flag.Bool("h", false, "Show help")
 	flag.Parse()
+
+	if *help {
+		fmt.Println("Help:")
+		fmt.Println("-c COUNTRY\tReturns table for given COUNTRY")
+		fmt.Println("-t NUMBER\tReturns table for first NUMBER countries")
+		os.Exit(0)
+	}
 
 	url := getURL(country)
 
