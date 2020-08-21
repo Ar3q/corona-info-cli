@@ -2,27 +2,24 @@
 
 ## Install
 
-For using corona-info-cli from terminal in any directory:
+With source code cloned:
 
 ```bash
 go install
-# run program
-corona-info-cli
 ```
 
-For using only from directory where source code lives:
+Or using `go get` (should work):
 
 ```bash
-go build
-# run program
-./corona-info-cli
+go get github.com/koralowiec/corona-info-cli
 ```
 
 ## Usage
 
-Getting table with:
- - all countries: `corona-info-cli`
- - one specified country: `corona-info-cli -c poland` or `corona-info-cli -c pl`
- - first x countries: `corona-info-cli -t 5`
+```bash
+corona-info-cli
+```
 
+You should see:
 
+![screen](./screens/corona-info-cli-screen.png)
