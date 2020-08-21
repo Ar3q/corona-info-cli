@@ -9,10 +9,10 @@ import (
 )
 
 type Response struct {
-	Data []countryData `json:"data"`
+	Data []CountryData `json:"data"`
 }
 
-type countryData struct {
+type CountryData struct {
 	Country     string `json:"country"`
 	Cases       int    `json:"cases"`
 	TodayCases  int    `json:"todayCases"`
