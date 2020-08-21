@@ -5,24 +5,23 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/Ar3q/corona-info-cli/view"
+	"strconv"
 
 	"github.com/Ar3q/corona-info-cli/info"
+	"github.com/Ar3q/corona-info-cli/view"
+
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
 
 func main() {
 	country := flag.String("c", "", "Country name")
-	// top := flag.Int("t", 255, "Top x countries")
 	help := flag.Bool("h", false, "Show help")
 	flag.Parse()
 
 	if *help {
 		fmt.Println("Help:")
 		fmt.Println("-c COUNTRY\tReturns table for given COUNTRY")
-		fmt.Println("-t NUMBER\tReturns table for first NUMBER countries")
 		os.Exit(0)
 	}
 
@@ -44,29 +43,31 @@ func main() {
 	}
 
 	termWidth, termHeight := ui.TerminalDimensions()
-	tabpane := widgets.NewTabPane("1", "2")
+	// fmt.Printf("H: %d, W: %d\n", termHeight, termWidth)
+
+	tablesOfCountries := view.NewCountryTables(data.Data, termWidth, termHeight)
+
+	panes := make([]string, len(tablesOfCountries))
+	for i := 1; i <= len(tablesOfCountries); i++ {
+		panes[i-1] = strconv.Itoa(i)
+	}
+
+	tabpane := widgets.NewTabPane(panes...)
 	tabpane.SetRect(0, 2, termWidth, 5)
 	tabpane.Border = true
-
-	// view.PrintTable(data, *top)
-	tableOfCountries := view.NewCountryTable(data.Data, termWidth, termHeight)
 
 	header := widgets.NewParagraph()
 	header.Text = "Press q to quit, Press h or l to switch tabs"
 	header.SetRect(0, 1, termWidth, 2)
 	header.Border = false
-	header.TextStyle.Bg = ui.ColorBlue
 
 	renderTab := func() {
-		switch tabpane.ActiveTabIndex {
-		case 0:
-			ui.Render(tableOfCountries)
-		case 1:
-			ui.Render(header)
-		}
+		ui.Clear()
+		ui.Render(header, tabpane)
+		ui.Render(tablesOfCountries[tabpane.ActiveTabIndex])
 	}
 
-	ui.Render(tabpane)
+	ui.Render(header, tabpane, tablesOfCountries[0])
 
 	uiEvents := ui.PollEvents()
 	for {
@@ -76,13 +77,9 @@ func main() {
 			return
 		case "h":
 			tabpane.FocusLeft()
-			ui.Clear()
-			ui.Render(tabpane)
 			renderTab()
 		case "l":
 			tabpane.FocusRight()
-			ui.Clear()
-			ui.Render(tabpane)
 			renderTab()
 		}
 	}
