@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/Ar3q/corona-info-cli/info"
@@ -20,16 +18,6 @@ var searching bool = false
 var found bool = false
 
 func main() {
-	country := flag.String("c", "", "Country name")
-	help := flag.Bool("h", false, "Show help")
-	flag.Parse()
-
-	if *help {
-		fmt.Println("Help:")
-		fmt.Println("-c COUNTRY\tReturns table for given COUNTRY")
-		os.Exit(0)
-	}
-
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -37,34 +25,18 @@ func main() {
 
 	var data *info.Response
 	var err error
-	if *country == "" {
-		data, err = info.Fetch()
-	} else {
-		data, err = info.FetchForOneCountry(*country)
-	}
+	data, err = info.Fetch()
 	if err != nil {
 		fmt.Printf("Error: %v appeared", err)
 		os.Exit(1)
 	}
 
 	termWidth, termHeight := ui.TerminalDimensions()
-	// fmt.Printf("H: %d, W: %d\n", termHeight, termWidth)
 
 	tablesOfCountries := view.NewCountryTables(data.Data, termWidth, termHeight)
 
-	panes := make([]string, len(tablesOfCountries))
-	for i := 1; i <= len(tablesOfCountries); i++ {
-		panes[i-1] = strconv.Itoa(i)
-	}
-
-	tabpane := widgets.NewTabPane(panes...)
-	tabpane.SetRect(0, 2, termWidth, 5)
-	tabpane.Border = true
-
-	header := widgets.NewParagraph()
-	header.Text = "Press q to quit, Press h or l to switch tabs"
-	header.SetRect(0, 1, termWidth, 2)
-	header.Border = false
+	tabpane := view.NewTabPane(termWidth, len(tablesOfCountries))
+	helper := view.NewHelper(termWidth, "")
 
 	findParagraph := widgets.NewParagraph()
 	findParagraph.Text = ""
@@ -72,7 +44,7 @@ func main() {
 
 	renderTab := func(showFinder bool) {
 		ui.Clear()
-		ui.Render(header, tabpane)
+		ui.Render(helper, tabpane)
 		ui.Render(tablesOfCountries[tabpane.ActiveTabIndex])
 		if showFinder {
 			findParagraph.Text = find
@@ -80,7 +52,14 @@ func main() {
 		}
 	}
 
-	ui.Render(header, tabpane, tablesOfCountries[0])
+	refreshTablesAndTabpane := func() {
+		filteredData := data.Data.FilterByCountry(find)
+		tablesOfCountries = view.NewCountryTables(filteredData, termWidth, termHeight)
+
+		tabpane = view.NewTabPane(termWidth, len(tablesOfCountries))
+	}
+
+	ui.Render(helper, tabpane, tablesOfCountries[0])
 
 	uiEvents := ui.PollEvents()
 	for {
@@ -96,10 +75,9 @@ func main() {
 				find = ""
 				renderTab(true)
 			case "<C-l>":
-				if found {
-					find = ""
-					renderTab(true)
-				}
+				find = ""
+				refreshTablesAndTabpane()
+				renderTab(false)
 			case "<Backspace>":
 				if length := len(find); length > 0 {
 					lastCharacter := find[length-1]
@@ -107,11 +85,12 @@ func main() {
 					renderTab(true)
 				}
 			case "<Enter>":
-				filteredData := data.Data.FilterByCountry(find)
-				tablesOfCountries = view.NewCountryTables(filteredData, termWidth, termHeight)
-				find = "Results for: " + find
-				renderTab(true)
-				found = true
+				if !found {
+					refreshTablesAndTabpane()
+					find = "Results for: " + find
+					renderTab(true)
+					found = true
+				}
 			default:
 				if !found {
 					find = find + e.ID
@@ -123,6 +102,10 @@ func main() {
 			switch e.ID {
 			case "q", "<C-c>":
 				return
+			case "<C-l>":
+				find = ""
+				refreshTablesAndTabpane()
+				renderTab(false)
 			case "h":
 				tabpane.FocusLeft()
 				renderTab(false)
