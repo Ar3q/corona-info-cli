@@ -9,7 +9,7 @@ import (
 )
 
 type Response struct {
-	Data []CountryData `json:"data"`
+	Data ListCountryData `json:"data"`
 }
 
 type CountryData struct {
@@ -20,6 +20,8 @@ type CountryData struct {
 	TodayDeaths int    `json:"todayDeaths"`
 	Recovered   int    `json:"recovered"`
 }
+
+type ListCountryData []CountryData
 
 const urlForAllCountries string = "https://corona-stats.online/?format=json"
 
@@ -70,4 +72,18 @@ func fetchInfoFromAPI(url string) (*Response, error) {
 	}
 
 	return &responseObject, nil
+}
+
+func (data ListCountryData) FilterByCountry(match string) ListCountryData {
+	lowerMatch := strings.ToLower(match)
+
+	var filtered ListCountryData
+	for _, countryData := range data {
+		lowerCountry := strings.ToLower(countryData.Country)
+		if strings.Contains(lowerCountry, lowerMatch) {
+			filtered = append(filtered, countryData)
+		}
+	}
+
+	return filtered
 }

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Ar3q/corona-info-cli/info"
 	"github.com/Ar3q/corona-info-cli/view"
@@ -13,6 +14,10 @@ import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
+
+var find string
+var searching bool = false
+var found bool = false
 
 func main() {
 	country := flag.String("c", "", "Country name")
@@ -61,10 +66,18 @@ func main() {
 	header.SetRect(0, 1, termWidth, 2)
 	header.Border = false
 
-	renderTab := func() {
+	findParagraph := widgets.NewParagraph()
+	findParagraph.Text = ""
+	findParagraph.SetRect(0, termHeight-3, termWidth, termHeight)
+
+	renderTab := func(showFinder bool) {
 		ui.Clear()
 		ui.Render(header, tabpane)
 		ui.Render(tablesOfCountries[tabpane.ActiveTabIndex])
+		if showFinder {
+			findParagraph.Text = find
+			ui.Render(findParagraph)
+		}
 	}
 
 	ui.Render(header, tabpane, tablesOfCountries[0])
@@ -72,15 +85,57 @@ func main() {
 	uiEvents := ui.PollEvents()
 	for {
 		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return
-		case "h":
-			tabpane.FocusLeft()
-			renderTab()
-		case "l":
-			tabpane.FocusRight()
-			renderTab()
+		if searching {
+			switch e.ID {
+			case "<C-c>":
+				return
+			case "/", "<Escape>":
+				renderTab(false)
+				searching = false
+			case "<C-u>":
+				find = ""
+				renderTab(true)
+			case "<C-l>":
+				if found {
+					find = ""
+					renderTab(true)
+				}
+			case "<Backspace>":
+				if length := len(find); length > 0 {
+					lastCharacter := find[length-1]
+					find = strings.TrimSuffix(find, string(lastCharacter))
+					renderTab(true)
+				}
+			case "<Enter>":
+				filteredData := data.Data.FilterByCountry(find)
+				tablesOfCountries = view.NewCountryTables(filteredData, termWidth, termHeight)
+				find = "Results for: " + find
+				renderTab(true)
+				found = true
+			default:
+				if !found {
+					find = find + e.ID
+					renderTab(true)
+				}
+			}
+
+		} else {
+			switch e.ID {
+			case "q", "<C-c>":
+				return
+			case "h":
+				tabpane.FocusLeft()
+				renderTab(false)
+			case "l":
+				tabpane.FocusRight()
+				renderTab(false)
+			case "/":
+				find = ""
+				renderTab(true)
+				searching = true
+				found = false
+			}
+
 		}
 	}
 }

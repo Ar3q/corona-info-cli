@@ -42,7 +42,14 @@ func getRowsForEachTable(countryStats []info.CountryData, maxNumberOfRowsInTable
 		rows[0] = make([]string, len(headers))
 		rows[0] = headers
 
-		for j, country := range countryStats[i*maxNumberOfRowsInTable : (i+1)*maxNumberOfRowsInTable] {
+		var data info.ListCountryData
+		if len(countryStats[i*maxNumberOfRowsInTable:]) < maxNumberOfRowsInTable {
+			data = countryStats[i*maxNumberOfRowsInTable:]
+		} else {
+			data = countryStats[i*maxNumberOfRowsInTable : (i+1)*maxNumberOfRowsInTable]
+		}
+
+		for j, country := range data {
 			incJ := j + 1
 			orderNumber := i*maxNumberOfRowsInTable + incJ
 			rows[incJ] = make([]string, len(headers))
