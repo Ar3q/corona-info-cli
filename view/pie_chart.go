@@ -23,36 +23,59 @@ type ChartData struct {
 	fractions []float64
 }
 
-func PrepareDataForChartByCases(data info.ListCountryData, threshold int) ChartData {
-	sort.Slice(data, func(i, j int) bool {
-		return data[i].Cases > data[j].Cases
-	})
+type extractValue func(info.CountryData) int
+
+func prepareDataForChar(data info.ListCountryData, threshold int, extractFunc extractValue) ([]string, []float64) {
+	descendingSortBy(data, extractFunc)
 
 	countries := make([]string, threshold+1)
 	fractions := make([]float64, threshold+1)
 
-	totalCases := sumCases(data)
+	totalCases := sumValue(data, extractFunc)
 	fractionOfOthers := totalCases
 
 	for i, el := range data {
 		if i < threshold {
 			countries[i] = el.Country
-			fractions[i] = float64(el.Cases) / float64(totalCases)
-			fractionOfOthers -= el.Cases
+			value := extractFunc((el))
+			fractions[i] = float64(value) / float64(totalCases)
+			fractionOfOthers -= value
 		}
 	}
 
 	countries[threshold] = "Others"
 	fractions[threshold] = float64(fractionOfOthers) / float64(totalCases)
 
+	return countries, fractions
+}
+
+func sumValue(data info.ListCountryData, extractFunc extractValue) (sum int) {
+	for _, el := range data {
+		sum += extractFunc(el)
+	}
+	return sum
+}
+
+func descendingSortBy(data info.ListCountryData, extractFunc extractValue) {
+	sort.Slice(data, func(i, j int) bool {
+		return extractFunc(data[i]) > extractFunc((data[j]))
+	})
+}
+
+func PrepareDataForChartByCases(data info.ListCountryData, threshold int) ChartData {
+	extractCases := func(el info.CountryData) int { return el.Cases }
+
+	countries, fractions := prepareDataForChar(data, threshold, extractCases)
+
 	return ChartData{title: "By Cases", countries: countries, fractions: fractions}
 }
 
-func sumCases(data info.ListCountryData) (sum int) {
-	for _, el := range data {
-		sum += el.Cases
-	}
-	return sum
+func PrepareDataForChartByDeaths(data info.ListCountryData, threshold int) ChartData {
+	extractDeaths := func(el info.CountryData) int { return el.Deaths }
+
+	countries, fractions := prepareDataForChar(data, threshold, extractDeaths)
+
+	return ChartData{title: "By Deaths", countries: countries, fractions: fractions}
 }
 
 func NewPieChart(cords PieChartCords, chartData ChartData) *widgets.PieChart {
@@ -60,7 +83,7 @@ func NewPieChart(cords PieChartCords, chartData ChartData) *widgets.PieChart {
 	pc.Title = chartData.title
 	pc.SetRect(cords.TopLeft.X, cords.TopLeft.Y, cords.BottomRight.X, cords.BottomRight.Y)
 	pc.Data = chartData.fractions
-	pc.AngleOffset = -.4 * math.Pi
+	pc.AngleOffset = -.3 * math.Pi
 	pc.LabelFormatter = func(i int, v float64) string {
 		return fmt.Sprintf("%s %.02f", chartData.countries[i], v)
 	}

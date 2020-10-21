@@ -42,12 +42,17 @@ func main() {
 	findParagraph.Text = ""
 	findParagraph.SetRect(0, termHeight-3, termWidth/2, termHeight)
 
-	pieChartData := view.PrepareDataForChartByCases(data.Data, 5)
-	pc1 := view.NewPieChart(view.PieChartCords{view.Point{termWidth/2 + 1, 5}, view.Point{termWidth, termHeight}}, pieChartData)
+	upperPieChartData := view.PrepareDataForChartByCases(data.Data, 6)
+	upperPieChartCords := view.PieChartCords{TopLeft: view.Point{X: termWidth/2 + 1, Y: 5}, BottomRight: view.Point{X: termWidth, Y: termHeight/2 + 2}}
+	upperPieChart := view.NewPieChart(upperPieChartCords, upperPieChartData)
+
+	bottomPieChartData := view.PrepareDataForChartByDeaths(data.Data, 6)
+	bottomPieChartCords := view.PieChartCords{TopLeft: view.Point{X: termWidth/2 + 1, Y: termHeight/2 + 3}, BottomRight: view.Point{X: termWidth, Y: termHeight}}
+	bottomPieChart := view.NewPieChart(bottomPieChartCords, bottomPieChartData)
 
 	renderTab := func(showFinder bool) {
 		ui.Clear()
-		ui.Render(helper, tabpane, pc1)
+		ui.Render(helper, tabpane, upperPieChart, bottomPieChart)
 		ui.Render(tablesOfCountries[tabpane.ActiveTabIndex])
 		if showFinder {
 			findParagraph.Text = find
@@ -62,7 +67,7 @@ func main() {
 		tabpane = view.NewTabPane(termWidth/2, len(tablesOfCountries))
 	}
 
-	ui.Render(helper, tabpane, tablesOfCountries[0], pc1)
+	ui.Render(helper, tabpane, tablesOfCountries[0], upperPieChart, bottomPieChart)
 
 	uiEvents := ui.PollEvents()
 	for {
